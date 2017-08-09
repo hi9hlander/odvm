@@ -120,6 +120,9 @@ class Quad:
             if idxs[e0][2] and idxs[e0][0] != idxs[e0][1]:
                for e in (3,1,2,6):
                   if idxs[e0][2]&(1<<e) != 0:
+                     if e&3 == 2: # opposite
+                        e2 = (e0+(3 if e == 6 else 1))&3
+                        if idxs[e2][0] == idxs[e2][1] and 0 < idxs[e2][0] < lsts[e2] and idxs[e2][2]&((1<<1)|(1<<3)) == ((1<<1)|(1<<3)): continue
                      j2 = attach[e]
                      j0 = j2^1
                      k0 = idxs[e0][j0]
@@ -146,17 +149,16 @@ class Quad:
          self.add_triangle(e0,k0,e0,k1,e2,k2,dk)
          idxs[e0][j0] = k1
          idxs[e2][j2] = k2
-         if e&3 == 2: # opposite
-            if j0 == 0:
-               idxs[(e0+1)&3][2] &= ~((1<<2)|(1<<6))
-               idxs[ e0     ][2] &= ~(1<<3)
-               idxs[(e0+3)&3][2]  = 0
-               idxs[ e2     ][2] &= ~(1<<1)
-            else:
-               idxs[(e0+3)&3][2] &= ~((1<<2)|(1<<6))
-               idxs[ e0     ][2] &= ~(1<<1)
-               idxs[(e0+1)&3][2]  = 0
-               idxs[ e2     ][2] &= ~(1<<3)
+         if   e == 6: # from left to opposite left
+            idxs[(e0+1)&3][2] &= ~((1<<2)|(1<<6))        # right   : disable opposite
+            idxs[ e0     ][2] &= ~(1<<3)                 # current : disable left
+            idxs[(e0+3)&3][2] &= ~((1<<2)|(1<<6)|(1<<1)) # left    : disable opposite and right
+            idxs[ e2     ][2] &= ~(1<<1)                 # opposite: disable right
+         elif e == 2: # from right to opposite right
+            idxs[(e0+3)&3][2] &= ~((1<<2)|(1<<6))        # left    : disable opposite
+            idxs[ e0     ][2] &= ~(1<<1)                 # current : disable right
+            idxs[(e0+1)&3][2] &= ~((1<<2)|(1<<6)|(1<<3)) # right   : disable opposite and left
+            idxs[ e2     ][2] &= ~(1<<3)                 # opposite: disable left
 
       del self.imap
       self.vertices    = self.geom.used_v
