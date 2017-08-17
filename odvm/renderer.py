@@ -42,8 +42,8 @@ class viewport:
       self.output.set_clear_color_active(True)
       self.output.clear_delete_flag()
 
-      self.camera = base.make_camera( self.output, lens=base.cam.node().get_lens() )
-      self.camera.node().display_regions[0].disable_clears()
+      base.make_camera( self.output, useCamera=base.cam )
+      base.cam.node().display_regions[-1].disable_clears()
 
       self.viewport_inputs = []
 
@@ -55,15 +55,13 @@ class viewport:
          self.output.add_render_texture( self.aux0, GraphicsOutput.RTM_bind_or_copy, GraphicsOutput.RTP_aux_hrgba_0 )
          self.output.set_clear_value(GraphicsOutput.RTP_aux_hrgba_0,Vec4(0.0,0.0,1024.0,0.0))
          self.output.set_clear_active(GraphicsOutput.RTP_aux_hrgba_0,True)
-      self.shader = NodePath(PandaNode('viewport{}-shader{}-node'.format(self.index,0)))
-      self.shader.set_shader(Shader.make( Shader.SLGLSL, vertex, fragment ))
-      self.cnt = 0
+      self.shader = ShaderAttrib.make().set_shader(Shader.make( Shader.SLGLSL, vertex, fragment ))
       if glsl_check_for_use( fragment, 'uniform vec4 viewport;' ): self.add_viewport_input(self)
-      else                                                       : self.camera.node().set_initial_state(self.shader.get_state())
+      else                                                       : base.cam.node().set_initial_state(RenderState.make_empty().add_attrib(self.shader))
 
    def calc_viewport_input(self,win):
-      sclx = tan( radians( 0.5 * self.camera.node().get_lens().get_hfov() ) )
-      scly = tan( radians( 0.5 * self.camera.node().get_lens().get_vfov() ) )
+      sclx = tan( radians( 0.5 * base.cam.node().get_lens().get_hfov() ) )
+      scly = tan( radians( 0.5 * base.cam.node().get_lens().get_vfov() ) )
       self.viewport = Vec4( -2.0*sclx/(win.get_x_size()-1), -2.0*scly/(win.get_y_size()-1), sclx*(1.0+1.0/(win.get_x_size()-1)), scly*(1.0+1.0/(win.get_y_size()-1)) )
 
    def add_viewport_input(self,obj):
@@ -79,8 +77,8 @@ class viewport:
       for o in self.viewport_inputs: o.set_viewport_input(self.viewport)
 
    def set_viewport_input(self,viewport):
-      self.shader.set_shader_input( 'viewport', viewport )
-      self.camera.node().set_initial_state(self.shader.get_state())
+      self.shader = self.shader.set_shader_input( 'viewport', viewport )
+      base.cam.node().set_initial_state(RenderState.make_empty().add_attrib(self.shader))
 
 
 class composer:
@@ -115,16 +113,20 @@ class Renderer(ShowBase):
 
       render.set_texture( loader.load_texture('white.png'), 0 )
 
-      self.viewport = viewport()
-
       base.win.sort = 2
       base.win.disable_clears()
-      base.win.display_regions[0].disableClears()
+      base.win.display_regions[0].disable_clears()
+      base.win.display_regions[0].active = False
 
       base.cam.node().display_regions[0].disable_clears()
-      base.cam.node().active = False
+      base.cam.node().display_regions[0].active = False
+
       base.cam2d.node().display_regions[0].disable_clears()
 
       render2d.set_two_sided(False)
+      render2d.set_depth_write(False)
+      render2d.set_depth_test(False)
+
+      self.viewport = viewport()
       self.composer = composer()
       self.composer.attach_viewport(self.viewport)
