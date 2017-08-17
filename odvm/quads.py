@@ -243,7 +243,7 @@ class Quads(GeomTriangles):
                   self.index.set_data1i(i1)
                   self.index.set_data1i(i2)
                   tmap[f] = t
-               for q in set( s[2] for e in self.line_x.values() for s in e ) | set( s[2] for e in self.line_y.values() for s in e ) | set( s[2] for e in self.line_z.values() for s in e ):
+               for q in frozenset( s[2] for e in self.line_x.values() for s in e ) | frozenset( s[2] for e in self.line_y.values() for s in e ) | frozenset( s[2] for e in self.line_z.values() for s in e ):
                   q.change_triangles(tmap)
                   if not tmap: break
                assert( not tmap )
