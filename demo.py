@@ -101,8 +101,18 @@ void main()
 """ 
 
 
+def unlock_camera(): base.disable_mouse()
+
+
+def lock_camera():
+   mat = Mat4(base.camera.get_mat())
+   mat.invert_in_place()
+   base.mouseInterfaceNode.set_mat(mat)
+   base.enable_mouse()
+
+
 class Demo(Renderer):
-   def __init__(self): 
+   def __init__(self):
       Renderer.__init__(self)
       self.viewport.add_shader( viewport_vert_glsl, viewport_frag_glsl )
       self.composer.add_shader( composer_vert_glsl, composer_frag_glsl )
@@ -121,8 +131,10 @@ class Demo(Renderer):
       self.model_path.hprInterval(10.0,Point3(-360,0,0)).loop()
       Sequence(Wait(3.0),Func(self.toggle_wireframe)).loop()
 
-      self.viewport.camera.set_pos(32,32,32)
-      self.viewport.camera.look_at(0,0,0)
+      unlock_camera()
+      base.camera.set_pos(32,32,32)
+      base.camera.look_at(0,0,0)
+      lock_camera()
 
       base.accept( 'w', self.toggle_wireframe )
       base.accept( 'W', self.toggle_wireframe )
@@ -267,6 +279,7 @@ class Demo(Renderer):
       rgba_prcd = False
       xyzi_pmtd = False
       with open( 'teapot.vox', 'rb' ) as f:
+      # with open( 'monu7.vox', 'rb' ) as f:
          if f.read(4) != b'VOX ': raise IOError
          version = int.from_bytes(f.read(4),byteorder='little')
          while f:
@@ -311,7 +324,9 @@ class Demo(Renderer):
                rgba_prcd = True
                continue
             f.seek( cn+cm, 1 )
-      self.viewport.camera.set_pos(128,128,128)
+      unlock_camera()
+      base.camera.set_pos(128,128,128)
+      lock_camera()
 
 
 game = Demo()
