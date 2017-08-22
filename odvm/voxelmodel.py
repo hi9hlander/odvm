@@ -1,12 +1,11 @@
-from panda3d.core import *
-from odvm.quads import Quads
+from odvm.groupby import GroupByNormal
+from odvm.quads import quads
 
 
-class VoxelModel(Geom):
-   def __init__(self):
-      Geom.__init__( self, GeomVertexData( 'vertices', GeomVertexFormat.get_v3n3c4(), Geom.UH_static ) )
-      self.quads = Quads(self)
-      self.add_primitive(self.quads)
+class VoxelModel(GroupByNormal):
+   def __init__( self, name, fmt ):
+      GroupByNormal.__init__( self, name, fmt )
+      self.quads = quads(self)
 
    def add(self,p2s,i,j,k,c,p2i=0,p2j=0,p2k=0):
       di = 1 << p2i

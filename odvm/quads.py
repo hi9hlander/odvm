@@ -1,9 +1,10 @@
-from panda3d.core import *
+from panda3d.core import Vec3
 from odvm.edges import edge, edges
 from odvm.grid import square, grid, intersect, same_corners
+from odvm.groupby import GroupByNormal
 
 
-class Quad:
+class quad:
    def __init__(self,v0,v1,v2,v3,colour):
       self.diag12 = (v1,v2)
       self.diag03 = (v0,v3)
@@ -11,44 +12,50 @@ class Quad:
 
    def match(self,v1,v2): return same_corners(self.diag12[0],self.diag12[1],v1,v2)
 
-   def attach(self,geom):
-      self.geom = geom
-
+   def attach(self,quads):
       x0,y0,z0 = self.diag12[0]
       x1,y1,z1 = self.diag12[1]
-      if   y0 == y1: self.normal = Vec3(0.0,(1.0 if (x0-x1)*(z1-z0) >= 0.0 else -1.0),0.0) # == -ux*vz, u=(x1-x0,0,z1-z0), v=(0,0,z1-z0)
-      elif x0 == x1: self.normal = Vec3((1.0 if (z0-z1)*(y1-y0) >= 0.0 else -1.0),0.0,0.0) # == -uz*vy, u=(0,y1-y0,z1-z0), v=(0,y1-y0,0)
-      else         : self.normal = Vec3(0.0,0.0,(1.0 if (x1-x0)*(y1-y0) >= 0.0 else -1.0)) # ==  ux*vy, u=(x1-x0,y1-y0,0), v=(0,y1-y0,0)
-      self.edges     = ( [], [], [], [] )
-      self.points    = ( [], [], [], [] )
-      self.vertices  = []
-      self.triangles = []
-      self.desc = ( [self.diag03[0],self.diag12[0],self.geom.add_edge(self.diag03[0],self.diag12[0],self)],  # v0 -> v1 : left
-                    [self.diag12[0],self.diag03[1],self.geom.add_edge(self.diag12[0],self.diag03[1],self)],  # v1 -> v3 : bottom
-                    [self.diag03[1],self.diag12[1],self.geom.add_edge(self.diag03[1],self.diag12[1],self)],  # v3 -> v2 : right
-                    [self.diag12[1],self.diag03[0],self.geom.add_edge(self.diag12[1],self.diag03[0],self)] ) # v2 -> v0 : top
+      if   y0 == y1: normal = Vec3(0.0,(1.0 if (x0-x1)*(z1-z0) >= 0.0 else -1.0),0.0) # == -ux*vz, u=(x1-x0,0,z1-z0), v=(0,0,z1-z0)
+      elif x0 == x1: normal = Vec3((1.0 if (z0-z1)*(y1-y0) >= 0.0 else -1.0),0.0,0.0) # == -uz*vy, u=(0,y1-y0,z1-z0), v=(0,y1-y0,0)
+      else         : normal = Vec3(0.0,0.0,(1.0 if (x1-x0)*(y1-y0) >= 0.0 else -1.0)) # ==  ux*vy, u=(x1-x0,y1-y0,0), v=(0,y1-y0,0)
+      self.quads = quads
+      self.geom  = quads.planes[normal]
+      self.rect  = ( [self.diag03[0],self.diag12[0],self.quads.add_edge(self.diag03[0],self.diag12[0],self)],  # v0 -> v1 : left
+                     [self.diag12[0],self.diag03[1],self.quads.add_edge(self.diag12[0],self.diag03[1],self)],  # v1 -> v3 : bottom
+                     [self.diag03[1],self.diag12[1],self.quads.add_edge(self.diag03[1],self.diag12[1],self)],  # v3 -> v2 : right
+                     [self.diag12[1],self.diag03[0],self.quads.add_edge(self.diag12[1],self.diag03[0],self)] ) # v2 -> v0 : top
       self.geom.update_q.add(self)
+      self.geom.faces.add(self)
 
    def detach(self):
+      if hasattr(self,'edges'):
+         del self.edges
+         del self.points
       if hasattr(self,'vertices'):
          self.geom.unused_v.extend(self.vertices )
          self.geom.unused_t.extend(self.triangles)
          del self.vertices
          del self.triangles
-         for d in self.desc: self.geom.sub_edge(d[0],d[1],d[2],self)
-         del self.edges
-         del self.points
-         del self.desc
-         del self.normal
-      self.geom.update_q.discard(self)
+      if self.quads is not None:
+         for d in self.rect: self.quads.sub_edge(d[0],d[1],d[2],self)
+         del self.rect
+         self.geom.faces.discard(self)
+         self.geom.update_q.discard(self)
+         self.geom  = None
+         self.quads = None
+
+   def update(self): self.geom.update_q.add(self)
 
    def change_edge(self,f,t):
-      for d in self.desc:
+      for d in self.rect:
          if d[2] is f: d[2] = t
 
    def query_edges(self):
+      if not hasattr(self,'edges'):
+         self.edges  = ( [], [], [], [] )
+         self.points = ( [], [], [], [] )
       build_rqrd = False
-      for i,d in enumerate(self.desc):
+      for i,d in enumerate(self.rect):
          if   d[0][0] != d[1][0]: ps = d[2].query_points(d[0][0],d[1][0])
          elif d[0][1] != d[1][1]: ps = d[2].query_points(d[0][1],d[1][1])
          else                   : ps = d[2].query_points(d[0][2],d[1][2])
@@ -83,15 +90,15 @@ class Quad:
    def add_triangle(self,e0,k0,e1,k1,e2,k2,dk):
       i0 = self.imap[e0][k0]
       if i0 < 0:
-         i0 = self.geom.add_vertex(self.edges[e0][k0],self.normal,self.colour)
+         i0 = self.geom.add_vertex(self.edges[e0][k0],self.colour)
          self.imap[e0][k0] = i0
       i1 = self.imap[e1][k1]
       if i1 < 0:
-         i1 = self.geom.add_vertex(self.edges[e1][k1],self.normal,self.colour)
+         i1 = self.geom.add_vertex(self.edges[e1][k1],self.colour)
          self.imap[e1][k1] = i1
       i2 = self.imap[e2][k2]
       if i2 < 0:
-         i2 = self.geom.add_vertex(self.edges[e2][k2],self.normal,self.colour)
+         i2 = self.geom.add_vertex(self.edges[e2][k2],self.colour)
          self.imap[e2][k2] = i2
       if dk > 0: self.geom.add_triangle(i0,i1,i2)
       else     : self.geom.add_triangle(i1,i0,i2)
@@ -102,17 +109,21 @@ class Quad:
       assert( not self.geom.used_v )
       assert( not self.geom.used_t )
 
-      self.geom.unused_v.extend(self.vertices )
-      self.geom.unused_t.extend(self.triangles)
+      if hasattr(self,'vertices'):
+         self.geom.unused_v.extend(self.vertices )
+         self.geom.unused_t.extend(self.triangles)
+      else:
+         self.vertices  = []
+         self.triangles = []
 
       lsts      = ( len(self.edges[0])-1, len(self.edges[1])-1, len(self.edges[2])-1, len(self.edges[3])-1 )
       idxs      = ( [ 0, lsts[0], 0x7f ], [ 0, lsts[1], 0x7f ], [ 0, lsts[2], 0x7f ], [ 0, lsts[3], 0x7f ] )
       attach    = ( -1, 0, 0, 1, -1, -1, 1 )
       self.imap = ( [-1]*len(self.edges[0]), [-2]*len(self.edges[1]), [-3]*len(self.edges[2]), [-4]*len(self.edges[3]) )
-      self.imap[0][ 0] = self.imap[3][-1] = self.geom.add_vertex(self.edges[0][0],self.normal,self.colour)
-      self.imap[0][-1] = self.imap[1][ 0] = self.geom.add_vertex(self.edges[1][0],self.normal,self.colour)
-      self.imap[2][-1] = self.imap[3][ 0] = self.geom.add_vertex(self.edges[3][0],self.normal,self.colour)
-      self.imap[1][-1] = self.imap[2][ 0] = self.geom.add_vertex(self.edges[2][0],self.normal,self.colour)
+      self.imap[0][ 0] = self.imap[3][-1] = self.geom.add_vertex(self.edges[0][0],self.colour)
+      self.imap[0][-1] = self.imap[1][ 0] = self.geom.add_vertex(self.edges[1][0],self.colour)
+      self.imap[2][-1] = self.imap[3][ 0] = self.geom.add_vertex(self.edges[3][0],self.colour)
+      self.imap[1][-1] = self.imap[2][ 0] = self.geom.add_vertex(self.edges[2][0],self.colour)
 
       while True:
          sel = ( 1e9, )
@@ -176,29 +187,22 @@ def point_shift(p,df,dt):
    else               : return Vec3(p[0],p[1],p[2]+(1.0 if dt[2] > df[2] else -1.0))
 
 
-class Quads(GeomTriangles):
-   def __init__(self,geom):
-      GeomTriangles.__init__(self,Geom.UH_static)
-      self.make_indexed()
-      self.geom       = geom
-      self.unused_v   = []
-      self.unused_t   = []
-      self.used_v     = []
-      self.used_t     = []
-      self.update_q   = set()
-      self.plane_x    = grid()
-      self.plane_y    = grid()
-      self.plane_z    = grid()
-      self.line_x     = edges(self)
-      self.line_y     = edges(self)
-      self.line_z     = edges(self)
-      self.new_quads  = set()
-      self.updating   = 0
+class quads:
+   def __init__( self, planes ):
+      self.planes    = planes
+      self.plane_x   = grid()
+      self.plane_y   = grid()
+      self.plane_z   = grid()
+      self.line_x    = edges()
+      self.line_y    = edges()
+      self.line_z    = edges()
+      self.new_quads = set()
+      self.updating  = 0
 
    def __enter__(self):
       if self.updating == 0: 
-         assert( not self.new_quads  )
-         assert( not self.update_q   )
+         assert( not self.new_quads            )
+         assert( not self.planes.is_updating() )
       self.updating += 1
       return self
 
@@ -206,55 +210,7 @@ class Quads(GeomTriangles):
       self.updating -= 1
       if self.updating == 0:
          while self.new_quads: self.new_quads.pop().attach(self)
-         self.vertices = self.geom.modify_vertex_data()
-         self.vertex   = GeomVertexWriter(self.vertices,'vertex')
-         self.normal   = GeomVertexWriter(self.vertices,'normal')
-         self.colour   = GeomVertexWriter(self.vertices,'color' )
-         indices       = self.modify_vertices()
-         self.index    = GeomVertexRewriter(indices,0)
-         while self.update_q: self.update_q.pop().build()
-
-         if self.unused_v:
-            self.unused_v.sort()
-            num_v    = self.vertices.get_num_rows()
-            shrink_v = num_v
-            while self.unused_v and self.unused_v[-1] == shrink_v-1:
-               self.unused_v.pop()
-               shrink_v -= 1
-            if shrink_v != num_v: self.vertices.set_num_rows(shrink_v)
-
-         if self.unused_t:
-            self.unused_t.sort()
-            num_t = indices.get_num_rows()
-            refs  = {}
-            while self.unused_t:
-               num_t -= 3
-               idx    = self.unused_t.pop()
-               if idx != num_t: refs[idx] = refs.pop(num_t,num_t)
-            if refs:
-               tmap = {}
-               for t,f in refs.items(): 
-                  self.index.set_row(f)
-                  i0 = self.index.get_data1i()
-                  i1 = self.index.get_data1i()
-                  i2 = self.index.get_data1i()
-                  self.index.set_row(t)
-                  self.index.set_data1i(i0)
-                  self.index.set_data1i(i1)
-                  self.index.set_data1i(i2)
-                  tmap[f] = t
-               for q in frozenset( s[2] for e in self.line_x.values() for s in e ) | frozenset( s[2] for e in self.line_y.values() for s in e ) | frozenset( s[2] for e in self.line_z.values() for s in e ):
-                  q.change_triangles(tmap)
-                  if not tmap: break
-               assert( not tmap )
-            indices.set_num_rows(num_t)
-
-         del self.index
-         del indices
-         del self.colour
-         del self.normal
-         del self.vertex
-         del self.vertices
+         self.planes.update()
 
    def add_sqr(self,quad):
       self.new_quads.add(quad)
@@ -316,39 +272,6 @@ class Quads(GeomTriangles):
          m12 = Vec3(round(0.5*(v3[0]+v2[0])),v2[1],v2[2])
       return ( ( v0, m01, m02, m03 ), ( m10, m11, m12, v3 ) )
 
-   def add_vertex(self,v,n,c):
-      if self.unused_v:
-         idx = self.unused_v.pop()
-         self.vertex.set_row(idx)
-         self.vertex.set_data3f(v)
-         self.normal.set_row(idx)
-         self.normal.set_data3f(n)
-         self.colour.set_row(idx)
-         self.colour.set_data4f(c)
-      else:
-         idx = self.vertices.get_num_rows()
-         self.vertex.set_row(idx)
-         self.vertex.add_data3f(v)
-         self.normal.set_row(idx)
-         self.normal.add_data3f(n)
-         self.colour.set_row(idx)
-         self.colour.add_data4f(c)
-      self.used_v.append(idx)
-      return idx
-
-   def add_triangle(self,i0,i1,i2):
-      if self.unused_t:
-         idx = self.unused_t.pop()
-         self.index.set_row(idx)
-         self.index.set_data1i(i0)
-         self.index.set_data1i(i1)
-         self.index.set_data1i(i2)
-      else:
-         idx = self.get_vertices().get_num_rows()
-         self.add_vertices(i0,i1,i2)
-      self.used_t.append(idx)
-      return idx
-
    def add_quad(self,v0,v1,v2,v3,colour):
       quad_rqrd = True
       s = self.sel_sqr(v1,v2)
@@ -389,8 +312,8 @@ class Quads(GeomTriangles):
                break
             else:
                q0_first = intersect(qs[0][1],qs[0][2],v1,v2)
-               if q0_first: self.add_sqr(Quad(qs[0][0],qs[0][1],qs[0][2],qs[0][3],q.colour))
-               else       : self.add_sqr(Quad(qs[1][0],qs[1][1],qs[1][2],qs[1][3],q.colour))
+               if q0_first: self.add_sqr(quad(qs[0][0],qs[0][1],qs[0][2],qs[0][3],q.colour))
+               else       : self.add_sqr(quad(qs[1][0],qs[1][1],qs[1][2],qs[1][3],q.colour))
                self.add_quad(v0,v1,v2,v3,colour)
                v0,v1,v2,v3 = qs[1 if q0_first else 0]
                colour      = q.colour
@@ -434,7 +357,7 @@ class Quads(GeomTriangles):
                         break
                      self.ret_sqr(s)
             else: break
-         self.add_sqr(Quad(v0,v1,v2,v3,colour))
+         self.add_sqr(quad(v0,v1,v2,v3,colour))
 
    def add(self,scale,i0,j0,k0,vs):
       with self:

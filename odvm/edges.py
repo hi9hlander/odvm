@@ -29,10 +29,6 @@ class edge(set):
 
 
 class edges(dict):
-   def __init__(self,geom):
-      dict.__init__(self)
-      self.geom = geom
-
    def add(self,a0,a1,b,c,quad):
       k = edge(a0,a1,b,c)
       e = self.pop(k,k)
@@ -47,7 +43,7 @@ class edges(dict):
          e.a1 = k.a1
       self[e] = e
       for s in e:
-         if s[0] < a0 < s[1] or s[1] < a0 < s[0] or s[0] < a1 < s[1] or s[1] < a1 < s[0]: self.geom.update_q.add(s[2])
+         if s[0] < a0 < s[1] or s[1] < a0 < s[0] or s[0] < a1 < s[1] or s[1] < a1 < s[0]: s[2].update()
          if s[0] < e.a0: e.a0 = s[0]
          if s[1] < e.a0: e.a0 = s[1]
          if s[0] > e.a1: e.a1 = s[0]
@@ -60,7 +56,7 @@ class edges(dict):
       if e:
          e.a0,e.a1 = e.a1,e.a0
          for s in e:
-            if s[0] < a0 < s[1] or s[1] < a0 < s[0] or s[0] < a1 < s[1] or s[1] < a1 < s[0]: self.geom.update_q.add(s[2])
+            if s[0] < a0 < s[1] or s[1] < a0 < s[0] or s[0] < a1 < s[1] or s[1] < a1 < s[0]: s[2].update()
             if s[0] < e.a0: e.a0 = s[0]
             if s[1] < e.a0: e.a0 = s[1]
             if s[0] > e.a1: e.a1 = s[0]
