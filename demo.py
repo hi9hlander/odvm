@@ -11,15 +11,16 @@ viewport_vert_glsl = """
 
 uniform mat4 p3d_ModelViewProjectionMatrix;
 uniform mat3 p3d_NormalMatrix;
+uniform vec3 gnormal;
 
 in vec4 p3d_Vertex;
-in vec3 p3d_Normal;
 in vec4 p3d_Color;
 in vec2 p3d_MultiTexCoord0;
 
-out vec2 texcoord;
-out vec4 color;
-out vec3 nxy_pz;
+     out vec2  texcoord;
+flat out vec4  color;
+flat out vec2  pnormal;
+     out float pos_w;
 
 void main() 
 { 
@@ -27,9 +28,10 @@ void main()
    gl_Position = pos;
    texcoord    = p3d_MultiTexCoord0;
    color       = p3d_Color;
-   vec3 nrm    = p3d_NormalMatrix*p3d_Normal;
-   nxy_pz      = vec3(nrm.xy*inversesqrt(0.5*nrm.z+0.5),0.01*pos.w);
-} 
+   vec3 nrm    = p3d_NormalMatrix*gnormal;
+   pnormal     = nrm.xy*inversesqrt(0.5*nrm.z+0.5);
+   pos_w       = 0.01*pos.w;
+}
 """ 
 
 viewport_frag_glsl = """ 
@@ -37,15 +39,16 @@ viewport_frag_glsl = """
 
 uniform sampler2D p3d_Texture0; 
 
-in vec2 texcoord;
-in vec4 color;
-in vec3 nxy_pz;
+     in vec2  texcoord;
+flat in vec4  color;
+flat in vec2  pnormal;
+     in float pos_w;
 
 void main() 
 { 
    vec4 clr = texture2D(p3d_Texture0,texcoord)*color;
    gl_FragData[0] = clr;
-   gl_FragData[1] = vec4( nxy_pz, step(0.5,clr.a) );
+   gl_FragData[1] = vec4( pnormal, pos_w, step(0.5,clr.a) );
 } 
 """ 
 
@@ -118,10 +121,15 @@ class Demo(Renderer):
       self.composer.add_shader( composer_vert_glsl, composer_frag_glsl )
       base.set_frame_rate_meter(True)
 
-      self.model      = VoxelModel()
-      self.model_node = GeomNode('VoxelModel')
-      self.model_node.add_geom(self.model)
-      self.model_path = render.attach_new_node(self.model_node)
+      self.model = VoxelModel( 'VoxelModel', GeomVertexFormat.get_v3c4() )
+      self.model.set_shader_input( Vec3( 1.0,0.0,0.0), 'gnormal', Vec3( 1.0,0.0,0.0) )
+      self.model.set_shader_input( Vec3(-1.0,0.0,0.0), 'gnormal', Vec3(-1.0,0.0,0.0) )
+      self.model.set_shader_input( Vec3(0.0, 1.0,0.0), 'gnormal', Vec3(0.0, 1.0,0.0) )
+      self.model.set_shader_input( Vec3(0.0,-1.0,0.0), 'gnormal', Vec3(0.0,-1.0,0.0) )
+      self.model.set_shader_input( Vec3(0.0,0.0, 1.0), 'gnormal', Vec3(0.0,0.0, 1.0) )
+      self.model.set_shader_input( Vec3(0.0,0.0,-1.0), 'gnormal', Vec3(0.0,0.0,-1.0) )
+
+      self.model_path = render.attach_new_node(self.model)
       self.model_path.set_color_off()
       self.model_path.set_attrib(CullFaceAttrib.make(CullFaceAttrib.MCullClockwise))
       self.model_path.set_transparency(TransparencyAttrib.MDual)
@@ -328,6 +336,10 @@ class Demo(Renderer):
       base.camera.set_pos(128,128,128)
       lock_camera()
 
+   def geometry_test9(self):
+      for (i,j,k) in ( (i,j,k) for i in range(20,-22,-2) for j in range(20,-22,-2) for k in range(20,-22,-2) ):
+         self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+
 
 game = Demo()
 # cProfile.run('game.geometry_test1()','demo.profile')
@@ -337,10 +349,9 @@ game = Demo()
 # cProfile.run('game.geometry_test5()','demo.profile')
 # cProfile.run('game.geometry_test6()','demo.profile')
 # cProfile.run('game.geometry_test7()','demo.profile')
-try:
-   cProfile.run('game.geometry_test8()','demo.profile')
-except FileNotFoundError:
-   cProfile.run('game.geometry_test7()','demo.profile')
+try: cProfile.run('game.geometry_test8()','demo.profile')
+except FileNotFoundError: cProfile.run('game.geometry_test7()','demo.profile')
+# cProfile.run('game.geometry_test9()','demo.profile')
 
 pstats.Stats('demo.profile').strip_dirs().sort_stats('time').print_stats()
 game.run()
