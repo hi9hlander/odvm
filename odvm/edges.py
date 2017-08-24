@@ -9,9 +9,9 @@ class edge(set):
       self.b = b
       self.c = c
 
-      x = int(b); x = 2 * x if x >= 0 else -2 * x - 1
-      y = int(c); y = 2 * y if y >= 0 else -2 * y - 1
-      self.ft = ( x * x + x + y if x >= y else x + y * y )
+      x = int(b); x = x+x if x >= 0 else -1-x-x
+      y = int(c); y = y+y if y >= 0 else -1-y-y
+      self.ft = ( x*x + x + y if x >= y else x + y*y )
 
    def query_points(self,a0,a1):
       if a0 > a1: reverse_rqrd,a0,a1 = True,a1,a0

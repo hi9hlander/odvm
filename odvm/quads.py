@@ -37,7 +37,7 @@ class quad:
          del self.vertices
          del self.triangles
       if self.quads is not None:
-         for d in self.rect: self.quads.sub_edge(d[0],d[1],d[2],self)
+         for e in self.rect: self.quads.sub_edge(e[0],e[1],e[2],self)
          del self.rect
          self.geom.faces.discard(self)
          self.geom.update_q.discard(self)
@@ -47,47 +47,47 @@ class quad:
    def update(self): self.geom.update_q.add(self)
 
    def change_edge(self,f,t):
-      for d in self.rect:
-         if d[2] is f: d[2] = t
+      for e in self.rect:
+         if e[2] is f: e[2] = t
 
    def query_edges(self):
       if not hasattr(self,'edges'):
          self.edges  = ( [], [], [], [] )
          self.points = ( [], [], [], [] )
       build_rqrd = False
-      for i,d in enumerate(self.rect):
-         if   d[0][0] != d[1][0]: ps = d[2].query_points(d[0][0],d[1][0])
-         elif d[0][1] != d[1][1]: ps = d[2].query_points(d[0][1],d[1][1])
-         else                   : ps = d[2].query_points(d[0][2],d[1][2])
+      for i,e in enumerate(self.rect):
+         if   e[0][0] != e[1][0]: ps = e[2].query_points(e[0][0],e[1][0])
+         elif e[0][1] != e[1][1]: ps = e[2].query_points(e[0][1],e[1][1])
+         else                   : ps = e[2].query_points(e[0][2],e[1][2])
 
          if not self.edges[i] or self.points[i] != ps:
             self.points[i][:] = ps
             build_rqrd = True
 
             del self.edges[i][:]
-            self.edges[i].append(d[0])
-            if   d[0][0] != d[1][0]:
-               pp = d[0][0]
+            self.edges[i].append(e[0])
+            if   e[0][0] != e[1][0]:
+               pp = e[0][0]
                for p in ps:
                   if p == pp: continue
-                  self.edges[i].append(Vec3(p,d[0][1],d[0][2]))
+                  self.edges[i].append(Vec3(p,e[0][1],e[0][2]))
                   pp = p
-            elif d[0][1] != d[1][1]:
-               pp = d[0][1]
+            elif e[0][1] != e[1][1]:
+               pp = e[0][1]
                for p in ps:
                   if p == pp: continue
-                  self.edges[i].append(Vec3(d[0][0],p,d[0][2]))
+                  self.edges[i].append(Vec3(e[0][0],p,e[0][2]))
                   pp = p
             else:
-               pp = d[0][2]
+               pp = e[0][2]
                for p in ps:
                   if p == pp: continue
-                  self.edges[i].append(Vec3(d[0][0],d[0][1],p))
+                  self.edges[i].append(Vec3(e[0][0],e[0][1],p))
                   pp = p
-            self.edges[i].append(d[1])
+            self.edges[i].append(e[1])
       return build_rqrd
 
-   def add_triangle(self,e0,k0,e1,k1,e2,k2,dk):
+   def add_triangle(self,e0,k0,e1,k1,e2,k2):
       i0 = self.imap[e0][k0]
       if i0 < 0:
          i0 = self.geom.add_vertex(self.edges[e0][k0],self.colour)
@@ -100,8 +100,8 @@ class quad:
       if i2 < 0:
          i2 = self.geom.add_vertex(self.edges[e2][k2],self.colour)
          self.imap[e2][k2] = i2
-      if dk > 0: self.geom.add_triangle(i0,i1,i2)
-      else     : self.geom.add_triangle(i1,i0,i2)
+      if e0 != e1 or k1 > k0: self.geom.add_triangle(i0,i1,i2)
+      else                  : self.geom.add_triangle(i1,i0,i2)
 
    def build(self):
       if not self.query_edges(): return
@@ -132,32 +132,47 @@ class quad:
                for e in (3,1,2,6):
                   if idxs[e0][2]&(1<<e) != 0:
                      if e&3 == 2: # opposite
-                        e2 = (e0+(3 if e == 6 else 1))&3
-                        if idxs[e2][0] == idxs[e2][1] and 0 < idxs[e2][0] < lsts[e2] and idxs[e2][2]&((1<<1)|(1<<3)) == ((1<<1)|(1<<3)): continue
+                        ea = (e0+(3 if e == 6 else 1))&3
+                        if idxs[ea][0] != idxs[ea][1] or idxs[ea][0] == idxs[ea][1] and 0 < idxs[ea][0] < lsts[ea] and idxs[ea][2]&((1<<1)|(1<<3)) == ((1<<1)|(1<<3)): continue
+                     e2 = (e0+e)&3
                      j2 = attach[e]
                      j0 = j2^1
                      k0 = idxs[e0][j0]
-                     e2 = (e0+e)&3
                      k2 = idxs[e2][j2]
                      dk = 1-(j0<<1) # +1 or -1
-                     if self.imap[e0][k0] == self.imap[e2][k2]: # corner
+                     k1 = k0+dk
+                     if e&3 == 2 and ( k2 == 0 and k1 == lsts[e0] or k2 == lsts[e2] and k1 == 0 ): continue # opposite, corner to corner
+                     if self.imap[e0][k0] == self.imap[e2][k2]: # contains corner
                         if k2 == idxs[e2][j0]: continue
                         k2 -= dk
-                     d  = max( (self.edges[e2][k2]-self.edges[e0][k0]).length_squared(), (self.edges[e2][k2]-self.edges[e0][k0+dk]).length_squared() )
-                     if d < sel[0]: sel = (d,e0,j0,k0,e2,j2,k2,dk,e)
+                     # d  = max( (self.edges[e2][k2]-self.edges[e0][k0]).length_squared(), (self.edges[e2][k2]-self.edges[e0][k0+dk]).length_squared() )
+                     v01  = self.edges[e0][k0+dk]-self.edges[e0][k0]
+                     v02  = self.edges[e2][k2]   -self.edges[e0][k0]
+                     v12  = self.edges[e2][k2]-self.edges[e0][k0+dk]
+                     lenc = max(v02.length_squared(),v12.length_squared())
+                     v01.normalize()
+                     v02.normalize()
+                     v12.normalize()
+                     d102 = abs(v01.dot(v02))
+                     d120 = abs(v02.dot(v12))
+                     d210 = abs(v12.dot(-v01))
+                     # d = min( max(d102,d120)/v02.length(), max(d210,d120)/v12.length() ) 
+                     d = max(d102,d120,d210)*lenc
+                     if d < sel[0]: sel = (d,e0,j0,k0,k1,e2,j2,k2,e)
          if len(sel) == 1:
             for e0 in range(4):
                if idxs[e0][0] == idxs[e0][1] and 0 < idxs[e0][0] < lsts[e0] and idxs[e0][2]&((1<<1)|(1<<3)) == ((1<<1)|(1<<3)):
                   e1 = (e0+1)&3
                   e2 = (e0+3)&3
-                  if idxs[e1][0] == idxs[e1][1] and idxs[e2][0] == idxs[e2][1]: break
+                  if idxs[e1][0] == idxs[e1][1] and idxs[e1][2]&(1<<3) != 0 and idxs[e2][0] == idxs[e2][1] and idxs[e2][2]&(1<<1) != 0: break
             else: break
-            idxs[e0][2] = 0
-            self.add_triangle(e0,idxs[e0][0],e1,idxs[e1][0],e2,idxs[e2][0],1)
+            idxs[e0][2]  = 0
+            idxs[e1][2] &= ~(1<<3)
+            idxs[e2][2] &= ~(1<<1)
+            self.add_triangle(e0,idxs[e0][0],e1,idxs[e1][0],e2,idxs[e2][0])
             continue
-         d,e0,j0,k0,e2,j2,k2,dk,e = sel
-         k1 = k0+dk
-         self.add_triangle(e0,k0,e0,k1,e2,k2,dk)
+         d,e0,j0,k0,k1,e2,j2,k2,e = sel
+         self.add_triangle(e0,k0,e0,k1,e2,k2)
          idxs[e0][j0] = k1
          idxs[e2][j2] = k2
          if   e == 6: # from left to opposite left

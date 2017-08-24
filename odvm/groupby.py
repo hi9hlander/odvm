@@ -15,7 +15,7 @@ class GeomPlanes(Geom):
       self.add_primitive(self.tris)
 
    def update(self):
-      if not self.update_q and not self.unsused_v and not self.unused_t: return
+      if not self.update_q and not self.unused_v and not self.unused_t: return
 
       self.vertices = self.modify_vertex_data()
       self.vertex   = GeomVertexWriter( self.vertices, 'vertex' )

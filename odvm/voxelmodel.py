@@ -8,9 +8,9 @@ class VoxelModel(GroupByNormal):
       self.quads = quads(self)
 
    def add(self,p2s,i,j,k,c,p2i=0,p2j=0,p2k=0):
-      di = 1 << p2i
-      dj = 1 << p2j
-      dk = 1 << p2k
+      di = 1<<p2i
+      dj = 1<<p2j
+      dk = 1<<p2k
       self.quads.add( 1<<p2s,i,j,k,
          ( ( ( 0,  0,  0, di, dj,  0 ), c ),
            ( ( 0,  0,-dk,  0, dj,  0 ), c ),

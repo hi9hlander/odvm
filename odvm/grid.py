@@ -17,7 +17,7 @@ class square:
          self.b1 = b0
       self.c = c
       
-      x = int(c); x = 2 * x if x >= 0 else -2 * x - 1
+      x = int(c); x = x+x if x >= 0 else -1-x-x
       self.ft = x
 
       self.cover = cover
