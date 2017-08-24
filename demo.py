@@ -1,7 +1,7 @@
 from panda3d.core import *
 from direct.interval.IntervalGlobal import *
 from odvm.renderer import Renderer
-from odvm.voxelmodel import VoxelModel
+from odvm.optimizedvm import OptimizedVM
 import cProfile
 import pstats
 
@@ -121,7 +121,7 @@ class Demo(Renderer):
       self.composer.add_shader( composer_vert_glsl, composer_frag_glsl )
       base.set_frame_rate_meter(True)
 
-      self.model = VoxelModel( 'VoxelModel', GeomVertexFormat.get_v3c4() )
+      self.model = OptimizedVM( 'VoxelModel', GeomVertexFormat.get_v3c4() )
       self.model.set_shader_input( Vec3( 1.0,0.0,0.0), 'gnormal', Vec3( 1.0,0.0,0.0) )
       self.model.set_shader_input( Vec3(-1.0,0.0,0.0), 'gnormal', Vec3(-1.0,0.0,0.0) )
       self.model.set_shader_input( Vec3(0.0, 1.0,0.0), 'gnormal', Vec3(0.0, 1.0,0.0) )
@@ -174,26 +174,31 @@ class Demo(Renderer):
       self.model.add(4, -1,0,1, Vec4(1.0,1.0,1.0,1.0))
       self.model.add(1 , 3,3,1, Vec4(1.0,1.0,1.0,1.0))
       self.model.add(1 , 3,4,1, Vec4(1.0,1.0,1.0,1.0))
+      self.model.optimize()
 
    def geometry_test2(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if i*i+j*j+k*k <= 144: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.optimize()
 
    def geometry_test3(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if i*i+j*j+k*k <= 9: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.optimize()
 
    def geometry_test4(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if i*i+j*j+k*k <= 25: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.optimize()
 
    def geometry_test5(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if all( s[0]*s[0]+s[1]*s[1]+s[2]*s[2] <= 36 for s in ( (i,j,k), (i+1,j+1,k-1), (i+1,j,k), (i,j+1,k), (i,j,k-1), (i+1,j+1,k), (i+1,j,k-1), (i,j+1,k-1) ) ): self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.optimize()
 
    def geometry_test6(self):
       with self.model.quads:
@@ -202,6 +207,7 @@ class Demo(Renderer):
             y = j+0.5
             z = k+0.5
             if x*x+y*y+z*z <= 36: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.optimize()
 
    def geometry_test7(self):
       cmap   = { 'd': Vec4(0.235,0.235,0.141,1.0), 'w': Vec4(1.0,0.992,0.941,1.0), 'g': Vec4(0.447,0.678,0.176,1.0) }
@@ -281,6 +287,7 @@ class Demo(Renderer):
             for k,r in enumerate(p):
                for i,c in enumerate(r):
                   if c in cmap: self.model.add(0,i-3,j-5,k-2,cmap[c])
+         self.model.optimize()
 
    def geometry_test8(self):
       srgba = [Vec4(1.0,1.0,1.0,1.0)]*256
@@ -321,6 +328,7 @@ class Demo(Renderer):
                      y = int.from_bytes(f.read(1),byteorder='little')
                      c = int.from_bytes(f.read(1),byteorder='little')
                      self.model.add(0,x-(sx>>1),y-(sy>>1),z-(sz>>1),srgba[c])
+                  self.model.optimize()
                continue
             if chunk_id == b'RGBA' and not rgba_prcd:
                for i in range(1,257):
@@ -339,6 +347,7 @@ class Demo(Renderer):
    def geometry_test9(self):
       for (i,j,k) in ( (i,j,k) for i in range(20,-22,-2) for j in range(20,-22,-2) for k in range(20,-22,-2) ):
          self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+      self.model.optimize()
 
 
 game = Demo()
