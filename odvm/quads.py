@@ -214,6 +214,16 @@ class quads:
       self.new_quads = set()
       self.updating  = 0
 
+   def reset(self):
+      self.new_quads.clear()
+      self.line_z.clear()
+      self.line_y.clear()
+      self.line_x.clear()
+      self.plane_z.clear()
+      self.plane_y.clear()
+      self.plane_x.clear()
+      self.planes.reset()
+
    def __enter__(self):
       if self.updating == 0: 
          assert( not self.new_quads            )

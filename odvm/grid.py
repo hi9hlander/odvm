@@ -85,6 +85,12 @@ class grid:
 
    def set1(self,sqr): self.cell1[sqr] = sqr
 
+   def clear(self):
+      self.cell1 = None
+      self.clmn1 = None
+      for clmn in self.grid:
+         for cell in clmn: cell.clear()
+
 
 def intersect(q1,q2,v1,v2):
    if   q1[0] == q2[0]: return square(q1[1],q1[2],q2[1],q2[2],q1[0]) == square(v1[1],v1[2],v2[1],v2[2],v1[0])

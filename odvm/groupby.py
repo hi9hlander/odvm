@@ -14,6 +14,12 @@ class GeomPlanes(Geom):
       self.tris.make_indexed()
       self.add_primitive(self.tris)
 
+   def reset(self):
+      self.update_q.clear()
+      self.unused_v = list(range(self.get_vertex_data().get_num_rows()-1,-1,-1))
+      self.unused_t = list(range(self.tris.get_vertices().get_num_rows()-3,-3,-3))
+      self.faces.clear()
+
    def update(self):
       if not self.update_q and not self.unused_v and not self.unused_t: return
 
@@ -121,3 +127,6 @@ class GroupByNormal(GeomNode):
 
    def update(self):
       for v in self.nrm2idx.values(): v[1].update()
+
+   def reset(self):
+      for v in self.nrm2idx.values(): v[1].reset()
