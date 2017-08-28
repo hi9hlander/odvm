@@ -121,7 +121,7 @@ class Demo(Renderer):
       self.composer.add_shader( composer_vert_glsl, composer_frag_glsl )
       base.set_frame_rate_meter(True)
 
-      self.model = OptimizedVM( 'VoxelModel', GeomVertexFormat.get_v3c4() )
+      self.model = OptimizedVM( 'VoxelModel', GeomVertexFormat.get_v3c4(), 1 )
       self.model.set_shader_input( Vec3( 1.0,0.0,0.0), 'gnormal', Vec3( 1.0,0.0,0.0) )
       self.model.set_shader_input( Vec3(-1.0,0.0,0.0), 'gnormal', Vec3(-1.0,0.0,0.0) )
       self.model.set_shader_input( Vec3(0.0, 1.0,0.0), 'gnormal', Vec3(0.0, 1.0,0.0) )
