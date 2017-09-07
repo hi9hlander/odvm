@@ -96,7 +96,7 @@ void main()
    float z12 = texture2D(aux0,vec2(texcoord.s+ds,texcoord.t   )).z;
    float z21 = texture2D(aux0,vec2(texcoord.s   ,texcoord.t+dt)).z;
 
-   float e   = abs(nxy_pz.z-max(max(z01,z10),max(z12,z21)))*dne;
+   float e   = abs(nxy_pz.z-max(max(z01,z21),max(z10,z12)))*dne;
    float g   = step(0.01*nxy_pz.z,e);
 
    gl_FragColor = clr*fni*(1.0-g);
@@ -145,14 +145,12 @@ class Demo(Renderer):
       lock_camera()
 
       base.accept( 'w', self.toggle_wireframe )
-      base.accept( 'W', self.toggle_wireframe )
 
       base.bufferViewer.position = 'llcorner'
       base.bufferViewer.setCardSize(0,0.5)
       base.bufferViewer.layout   = 'vline'
 
       base.accept( 'v', self.toggle_cards )
-      base.accept( 'V', self.toggle_cards )
 
    def toggle_wireframe(self):
       if   self.model_path.get_render_mode() == 2:
