@@ -6,7 +6,7 @@ import cProfile
 import pstats
 
 
-viewport_vert_glsl = """ 
+viewport_vert_glsl = """
 #version 130
 
 uniform mat4 p3d_ModelViewProjectionMatrix;
@@ -22,22 +22,22 @@ flat out vec4  color;
 flat out vec2  pnormal;
      out float pos_w;
 
-void main() 
-{ 
+void main()
+{
    vec4    pos = p3d_ModelViewProjectionMatrix*p3d_Vertex;
    gl_Position = pos;
    texcoord    = p3d_MultiTexCoord0;
    color       = p3d_Color;
    vec3 nrm    = p3d_NormalMatrix*gnormal;
    pnormal     = nrm.xy*inversesqrt(0.5*nrm.z+0.5);
-   pos_w       = 0.01*pos.w;
+   pos_w       = 0.015625*pos.w;
 }
-""" 
+"""
 
-viewport_frag_glsl = """ 
+viewport_frag_glsl = """
 #version 130
 
-uniform sampler2D p3d_Texture0; 
+uniform sampler2D p3d_Texture0;
 
      in vec2  texcoord;
 flat in vec4  color;
@@ -45,14 +45,14 @@ flat in vec2  pnormal;
      in float pos_w;
 
 void main() 
-{ 
+{
    vec4 clr = texture2D(p3d_Texture0,texcoord)*color;
    gl_FragData[0] = clr;
    gl_FragData[1] = vec4( pnormal, pos_w, step(0.5,clr.a) );
-} 
-""" 
+}
+"""
 
-composer_vert_glsl = """ 
+composer_vert_glsl = """
 #version 130
 
 out vec2 texcoord;
@@ -62,13 +62,13 @@ void main()
    vec2     ij = vec2(float((gl_VertexID&1)<<2),float((gl_VertexID&2)<<1));
    gl_Position = vec4(ij-1.0,0.0,1.0);
    texcoord    = ij*0.5;
-} 
-""" 
+}
+"""
 
-composer_frag_glsl = """ 
+composer_frag_glsl = """
 #version 130
 
-uniform sampler2D p3d_Texture0; 
+uniform sampler2D p3d_Texture0;
 uniform sampler2D aux0;
 uniform vec4      viewport;
 uniform float     thickness;
@@ -76,7 +76,7 @@ uniform float     thickness;
 in vec2 texcoord;
 
 void main() 
-{ 
+{
    vec4    clr = texture2D(p3d_Texture0,texcoord);
    vec3 nxy_pz = texture2D(aux0,texcoord).xyz;
    float  x2y2 = dot(nxy_pz.xy,nxy_pz.xy);
@@ -97,11 +97,11 @@ void main()
    float z21 = texture2D(aux0,vec2(texcoord.s   ,texcoord.t+dt)).z;
 
    float e   = abs(nxy_pz.z-max(max(z01,z21),max(z10,z12)))*dne;
-   float g   = step(0.01*nxy_pz.z,e);
+   float g   = step(0.015625*nxy_pz.z,e);
 
    gl_FragColor = clr*fni*(1.0-g);
-} 
-""" 
+}
+"""
 
 
 def unlock_camera(): base.disable_mouse()
