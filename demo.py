@@ -298,8 +298,8 @@ class Demo(Renderer):
       srgba = [Vec4(1.0,1.0,1.0,1.0)]*256
       rgba_prcd = False
       xyzi_pmtd = False
-      # with open( 'teapot.vox', 'rb' ) as f:
-      with open( 'monu7.vox', 'rb' ) as f:
+      with open( 'teapot.vox', 'rb' ) as f:
+      # with open( 'monu7.vox', 'rb' ) as f:
          if f.read(4) != b'VOX ': raise IOError
          version = int.from_bytes(f.read(4),byteorder='little')
          while f:
