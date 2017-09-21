@@ -1,7 +1,43 @@
 from panda3d.core import Vec3
 from odvm.edges import edge, edges
-from odvm.grid import square, grid, intersect, same_corners
+from odvm.grid import square, grid, same_corners
 from odvm.groupby import GroupByNormal
+
+
+def slice_by_sqr(v0,v1,v2,v3,i1,i2):
+   if   abs(v1[0]-v2[0]) <= abs(v1[1]-v2[1]) >= abs(v1[2]-v2[2]): a = 1
+   elif abs(v1[0]-v2[0]) <= abs(v1[2]-v2[2]) >= abs(v1[0]-v2[0]): a = 2
+   else                                                         : a = 0
+   m  = (v1+v2)*0.5
+   d1 = abs(i1[a]-m[a])
+   d2 = abs(i2[a]-m[a])
+   ia = -1
+   if d1 <= d2:
+      if d1+d1 >= abs(v1[a]-v2[a]): ia = a
+      else                        : p  = i1[a]
+   else:
+      if d2+d2 >= abs(v1[a]-v2[a]): ia = a
+      else                        : p  = i2[a]
+   if ia != -1:
+      if   ia != 1 and v1[1] != v2[1]: a = 1
+      elif ia != 2 and v1[2] != v2[2]: a = 2
+      else                           : a = 0
+      if abs(i1[a]-m[a]) <= abs(i2[a]-m[a]): p = i1[a]
+      else                                 : p = i2[a]
+   if v0[a] == v1[a]:
+      c2    = Vec3(v2)
+      c3    = Vec3(v3)
+      c2[a] = p
+      c3[a] = p
+      if abs(i2[a]-i1[a])+abs(p-v0[a]) <= abs((i2[a]-p)+(i1[a]-v0[a])): return ( (v0,v1,c2,c3), (c2,c3,v2,v3) )
+      else                                                            : return ( (c2,c3,v2,v3), (v0,v1,c2,c3) )
+   else:
+      c1    = Vec3(v1)
+      c3    = Vec3(v3)
+      c1[a] = p
+      c3[a] = p
+      if abs(i2[a]-i1[a])+abs(p-v0[a]) <= abs((i2[a]-p)+(i1[a]-v0[a])): return ( (v0,c1,v2,c3), (c1,v1,c3,v3) )
+      else                                                            : return ( (c1,v1,c3,v3), (v0,c1,v2,c3) )
 
 
 class quad:
@@ -69,21 +105,21 @@ class quad:
             if   e[0][0] != e[1][0]:
                pp = e[0][0]
                for p in ps:
-                  if p == pp: continue
-                  self.edges[i].append(Vec3(p,e[0][1],e[0][2]))
-                  pp = p
+                  if p != pp:
+                     self.edges[i].append(Vec3(p,e[0][1],e[0][2]))
+                     pp = p
             elif e[0][1] != e[1][1]:
                pp = e[0][1]
                for p in ps:
-                  if p == pp: continue
-                  self.edges[i].append(Vec3(e[0][0],p,e[0][2]))
-                  pp = p
+                  if p != pp:
+                     self.edges[i].append(Vec3(e[0][0],p,e[0][2]))
+                     pp = p
             else:
                pp = e[0][2]
                for p in ps:
-                  if p == pp: continue
-                  self.edges[i].append(Vec3(e[0][0],e[0][1],p))
-                  pp = p
+                  if p != pp:
+                     self.edges[i].append(Vec3(e[0][0],e[0][1],p))
+                     pp = p
             self.edges[i].append(e[1])
       return build_rqrd
 
@@ -256,10 +292,8 @@ class quads:
 
    def sub_sqr(self,sqr):
       self.plane1.popR(sqr)
-      try:
-         self.new_quads.remove(sqr.cover)
-      except KeyError:
-         sqr.cover.detach()
+      try            : self.new_quads.remove(sqr.cover)
+      except KeyError: sqr.cover.detach()
 
    def ret_sqr(self,sqr): self.plane1.set1(sqr)
 
@@ -272,30 +306,6 @@ class quads:
       if   v0[0] != v1[0]: self.line_x.sub(v0[0],v1[0],e,quad)
       elif v0[1] != v1[1]: self.line_y.sub(v0[1],v1[1],e,quad)
       else               : self.line_z.sub(v0[2],v1[2],e,quad)
-
-   def inhalf(self,v0,v1,v2,v3):
-      if   abs(v1[0]-v2[0]) <= abs(v1[1]-v2[1]) >= abs(v1[2]-v2[2]):
-         m01 = Vec3(v1[0],round(0.5*(v0[1]+v1[1])),v1[2])
-         m02 = Vec3(v2[0],round(0.5*(v0[1]+v2[1])),v2[2])
-         m03 = Vec3(v3[0],round(0.5*(v0[1]+v3[1])),v3[2])
-         m10 = Vec3(v0[0],round(0.5*(v3[1]+v0[1])),v0[2])
-         m11 = Vec3(v1[0],round(0.5*(v3[1]+v1[1])),v1[2])
-         m12 = Vec3(v2[0],round(0.5*(v3[1]+v2[1])),v2[2])
-      elif abs(v1[0]-v2[0]) <= abs(v1[2]-v2[2]) >= abs(v1[0]-v2[0]):
-         m01 = Vec3(v1[0],v1[1],round(0.5*(v0[2]+v1[2])))
-         m02 = Vec3(v2[0],v2[1],round(0.5*(v0[2]+v2[2])))
-         m03 = Vec3(v3[0],v3[1],round(0.5*(v0[2]+v3[2])))
-         m10 = Vec3(v0[0],v0[1],round(0.5*(v3[2]+v0[2])))
-         m11 = Vec3(v1[0],v1[1],round(0.5*(v3[2]+v1[2])))
-         m12 = Vec3(v2[0],v2[1],round(0.5*(v3[2]+v2[2])))
-      else:
-         m01 = Vec3(round(0.5*(v0[0]+v1[0])),v1[1],v1[2])
-         m02 = Vec3(round(0.5*(v0[0]+v2[0])),v2[1],v2[2])
-         m03 = Vec3(round(0.5*(v0[0]+v3[0])),v3[1],v3[2])
-         m10 = Vec3(round(0.5*(v3[0]+v0[0])),v0[1],v0[2])
-         m11 = Vec3(round(0.5*(v3[0]+v1[0])),v1[1],v1[2])
-         m12 = Vec3(round(0.5*(v3[0]+v2[0])),v2[1],v2[2])
-      return ( ( v0, m01, m02, m03 ), ( m10, m11, m12, v3 ) )
 
    def add_quad(self,v0,v1,v2,v3,colour):
       quad_rqrd = True
@@ -313,39 +323,26 @@ class quads:
                quad_rqrd = False
             break
          elif abs(q.diag12[0][0]-q.diag12[1][0]) < abs(v1[0]-v2[0]) or abs(q.diag12[0][1]-q.diag12[1][1]) < abs(v1[1]-v2[1]) or abs(q.diag12[0][2]-q.diag12[1][2]) < abs(v1[2]-v2[2]):
-            qs = self.inhalf(v0,v1,v2,v3)
-            if   q.match(qs[0][1],qs[0][2]):
+            qs = slice_by_sqr(v0,v1,v2,v3,q.diag12[0],q.diag12[1])
+            if q.match(qs[1][1],qs[1][2]):
                self.sub_sqr(s) # need alpha processing
-               v0,v1,v2,v3 = qs[1]
-            elif q.match(qs[1][1],qs[1][2]):
-               self.sub_sqr(s) # need alpha processing
-               v0,v1,v2,v3 = qs[0]
             else:
                self.ret_sqr(s)
-               self.add_quad(qs[0][0],qs[0][1],qs[0][2],qs[0][3],colour)
-               v0,v1,v2,v3 = qs[1]
+               self.add_quad(qs[1][0],qs[1][1],qs[1][2],qs[1][3],colour)
+            v0,v1,v2,v3 = qs[0]
          else:
             self.sub_sqr(s) # need alpha processing
-            qs = self.inhalf(q.diag03[0],q.diag12[0],q.diag12[1],q.diag03[1])
-            if   same_corners(qs[0][1],qs[0][2],v1,v2):
-               v0,v1,v2,v3 = qs[1]
-               colour      = q.colour
-               break
-            elif same_corners(qs[1][1],qs[1][2],v1,v2):
-               v0,v1,v2,v3 = qs[0]
-               colour      = q.colour
-               break
-            else:
-               q0_first = intersect(qs[0][1],qs[0][2],v1,v2)
-               if q0_first: self.add_sqr(quad(qs[0][0],qs[0][1],qs[0][2],qs[0][3],q.colour))
-               else       : self.add_sqr(quad(qs[1][0],qs[1][1],qs[1][2],qs[1][3],q.colour))
+            qs = slice_by_sqr(q.diag03[0],q.diag12[0],q.diag12[1],q.diag03[1],v1,v2)
+            if not same_corners(qs[1][1],qs[1][2],v1,v2):
+               self.add_sqr(quad(qs[1][0],qs[1][1],qs[1][2],qs[1][3],q.colour))
                self.add_quad(v0,v1,v2,v3,colour)
-               v0,v1,v2,v3 = qs[1 if q0_first else 0]
-               colour      = q.colour
+            v0,v1,v2,v3 = qs[0]
+            colour      = q.colour
+            break
          s = self.sel_sqr(v1,v2)
       if quad_rqrd:
          while True:
-            lr_idx = 0 if (v1-v0).length_squared() >= (v1-v3).length_squared() else 1
+            lr_idx = 0 if (v1-v0).length_squared() >= (v2-v0).length_squared() else 1
             for idx in range(2):
                if idx == lr_idx:
                   s = self.sel_sqr(point_shift(v1,v3,v1),v0) # left
@@ -355,7 +352,7 @@ class quads:
                         self.sub_sqr(s)
                         v0,v1 = q.diag03[0],q.diag12[0]
                         break
-                     self.ret_sqr(s)
+                     else: self.ret_sqr(s)
                   s = self.sel_sqr(v3,point_shift(v2,v0,v2)) # right
                   if s is not None:
                      q = s.cover
@@ -363,7 +360,7 @@ class quads:
                         self.sub_sqr(s)
                         v2,v3 = q.diag12[1],q.diag03[1]
                         break
-                     self.ret_sqr(s)
+                     else: self.ret_sqr(s)
                else:
                   s = self.sel_sqr(point_shift(v1,v0,v1),v3) # top
                   if s is not None:
@@ -372,7 +369,7 @@ class quads:
                         self.sub_sqr(s)
                         v1,v3 = q.diag12[0],q.diag03[1]
                         break
-                     self.ret_sqr(s)
+                     else: self.ret_sqr(s)
                   s = self.sel_sqr(v0,point_shift(v2,v3,v2)) # bottom
                   if s is not None:
                      q = s.cover
@@ -380,7 +377,7 @@ class quads:
                         self.sub_sqr(s)
                         v0,v2 = q.diag03[0],q.diag12[1]
                         break
-                     self.ret_sqr(s)
+                     else: self.ret_sqr(s)
             else: break
          self.add_sqr(quad(v0,v1,v2,v3,colour))
 

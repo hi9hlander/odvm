@@ -1,6 +1,3 @@
-# most of time spent here
-# should be ported to C/C++ to support huge models
-
 class square:
    def __init__(self,a0,b0,a1,b1,c,cover=None):
       if a0 < a1:
@@ -25,6 +22,13 @@ class square:
    def __eq__(self,other): return self.a0 < other.a1 and self.a1 > other.a0 and self.b0 < other.b1 and self.b1 > other.b0 and self.c == other.c
 
    def __hash__(self): return self.ft
+
+
+def same_corners(s1,s2,v1,v2):
+      if s1+s2 != v1+v2: return False
+      ds = s1-s2
+      dv = v1-v2
+      return abs(ds[0]) == abs(dv[0]) and abs(ds[1]) == abs(dv[1]) and abs(ds[2]) == abs(dv[2])
 
 
 class grid:
@@ -90,16 +94,3 @@ class grid:
       self.clmn1 = None
       for clmn in self.grid:
          for cell in clmn: cell.clear()
-
-
-def intersect(q1,q2,v1,v2):
-   if   q1[0] == q2[0]: return square(q1[1],q1[2],q2[1],q2[2],q1[0]) == square(v1[1],v1[2],v2[1],v2[2],v1[0])
-   elif q1[1] == q2[1]: return square(q1[0],q1[2],q2[0],q2[2],q1[1]) == square(v1[0],v1[2],v2[0],v2[2],v1[1])
-   else               : return square(q1[0],q1[1],q2[0],q2[1],q1[2]) == square(v1[0],v1[1],v2[0],v2[1],v1[2])
-
-
-def same_corners(s1,s2,v1,v2):
-      if s1+s2 != v1+v2: return False
-      ds = s1-s2
-      dv = v1-v2
-      return abs(ds[0]) == abs(dv[0]) and abs(ds[1]) == abs(dv[1]) and abs(ds[2]) == abs(dv[2])

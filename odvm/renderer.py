@@ -45,6 +45,8 @@ class viewport:
       base.make_camera( self.output, useCamera=base.cam )
       base.cam.node().display_regions[-1].disable_clears()
 
+      #self.stencil = StencilAttrib.make( True, StencilAttrib.SCF_always, StencilAttrib.SO_zero, StencilAttrib.SO_replace, StencilAttrib.SO_replace, 1, 0, 1 )
+
       self.viewport_inputs = []
 
    def add_shader(self,vertex,fragment):
@@ -57,7 +59,7 @@ class viewport:
          self.output.set_clear_active(GraphicsOutput.RTP_aux_hrgba_0,True)
       self.shader = ShaderAttrib.make().set_shader(Shader.make( Shader.SLGLSL, vertex, fragment ))
       if glsl_check_for_use( fragment, 'uniform vec4 viewport;' ): self.add_viewport_input(self)
-      else                                                       : base.cam.node().set_initial_state(RenderState.make_empty().add_attrib(self.shader))
+      else                                                       : base.cam.node().set_initial_state(RenderState.make_empty().add_attrib(self.shader))#.add_attrib(self.stencil))
 
    def calc_viewport_input(self,win):
       sclx = tan( radians( 0.5 * base.cam.node().get_lens().get_hfov() ) )
@@ -78,7 +80,7 @@ class viewport:
 
    def set_viewport_input(self,viewport):
       self.shader = self.shader.set_shader_input( 'viewport', viewport )
-      base.cam.node().set_initial_state(RenderState.make_empty().add_attrib(self.shader))
+      base.cam.node().set_initial_state(RenderState.make_empty().add_attrib(self.shader))#.add_attrib(self.stencil))
 
 
 class composer:
@@ -88,7 +90,7 @@ class composer:
       tri.add_next_vertices(3)
       geom.add_primitive(tri)
       node = GeomNode('composer-full-screen-triangle')
-      node.add_geom(geom)
+      node.add_geom(geom) #, RenderState.make_empty().add_attrib(StencilAttrib.make( True, StencilAttrib.SCF_equal, StencilAttrib.SO_keep, StencilAttrib.SO_keep, StencilAttrib.SO_keep, 1, 1, 0 )) )
       node.set_bounds(OmniBoundingVolume())
       node.final = True
       self.output = render2d.attach_new_node(node)

@@ -1,5 +1,5 @@
 from odvm.voxelmodel import VoxelModel
-from odvm.cuboids import cuboids_level, ijk1b_to_idx0_7, idx0_7_to_ijk1b, idx0_63_to_ijk2b
+from odvm.cuboids import cuboids_level, ijk1b_to_idx0_7, idx0_7_to_ijk1b, idx0_63_to_ijk2b, mask_to_2x2x2, mask_to_1x2x2, mask_to_2x1x2, mask_to_2x2x1, mask_to_2x1x1, mask_to_1x2x1, mask_to_1x1x2, mask_to_i2_j2, mask_to_i2_k2, mask_to_j2_k2
 from collections import defaultdict
 
 
@@ -10,38 +10,38 @@ class dict_cuboids_level(defaultdict):
 class OptimizedVM(VoxelModel):
    def __init__( self, name, fmt, level ):
       VoxelModel.__init__( self, name, fmt )
-      self.level   = level
-      self.cuboids = ( dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), 
-                       dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level() )
-      self.added   = ( dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), 
-                       dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level() )
+      self.opt_level = level
+      self.cuboids   = ( dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), 
+                         dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level() )
+      self.added     = ( dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), 
+                         dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level(), dict_cuboids_level() )
 
-   def set_opt_level( self, level ): self.level = level
+   def set_opt_level( self, level ): self.opt_level = level
 
    def add(self,p2s,i,j,k,c,p2i=0,p2j=0,p2k=0):
-      ii  = 0 if i >= 0 else 1
-      ij  = 0 if j >= 0 else 1
-      ik  = 0 if k >= 0 else 1
-      idx = ijk1b_to_idx0_7(ii,ij,ik)
+      si,ii = (0, i) if i >= 0 else (1,-1-i)
+      sj,ij = (0, j) if j >= 0 else (1,-1-j)
+      sk,ik = (0,-k) if k <= 0 else (1, k-1)
+      idx = ijk1b_to_idx0_7(si,sj,sk)
       key = (c,1<<p2s,1<<p2i,1<<p2j,1<<p2k)
-      self.cuboids[idx][key].add(abs(i),abs(j),abs(k))
+      self.cuboids[idx][key].add(ii,ij,ik)
 
-      if   self.level == 0: VoxelModel.add(self,p2s,i,j,k,c,p2i,p2j,p2k)
-      elif self.level == 1: self.added[idx][key].add(abs(i),abs(j),abs(k))
+      if   self.opt_level == 0: VoxelModel.add(self,p2s,i,j,k,c,p2i,p2j,p2k)
+      elif self.opt_level == 1: self.added[idx][key].add(ii,ij,ik)
 
    def sub(self,p2s,i,j,k,p2i=0,p2j=0,p2k=0):
-      ii = 0 if i >= 0 else 1
-      ij = 0 if j >= 0 else 1
-      ik = 0 if k >= 0 else 1
+      si,ii = (0, i) if i >= 0 else (1,-1-i)
+      sj,ij = (0, j) if j >= 0 else (1,-1-j)
+      sk,ik = (0,-k) if k <= 0 else (1, k-1)
 
       s  = 1<<p2s
       di = 1<<p2i
       dj = 1<<p2j
       dk = 1<<p2k
 
-      for key,cs in self.cuboids[ijk1b_to_idx0_7(ii,ij,ik)].items():
-         if key[1] == s and key[2] == di and key[3] == dj and key[4] == dk and cs.sub(abs(i),abs(j),abs(k)):
-            if   self.level == 0 or self.level == 1: # for level 1 keep list and process in optimize() call
+      for key,cs in self.cuboids[ijk1b_to_idx0_7(si,sj,sk)].items():
+         if key[1] == s and key[2] == di and key[3] == dj and key[4] == dk and cs.sub(ii,ij,ik):
+            if   self.opt_level == 0 or self.opt_level == 1: # todo: for level 1 keep list and process in optimize() call
                cim = self.get(s,i-1,j,k,di,dj,dk)
                if cim is None: cim = key[0]
                cip = self.get(s,i+1,j,k,di,dj,dk)
@@ -65,45 +65,204 @@ class OptimizedVM(VoxelModel):
             return
 
    def get(self,s,i,j,k,di,dj,dk):
-      ii = 0 if i >= 0 else 1
-      ij = 0 if j >= 0 else 1
-      ik = 0 if k >= 0 else 1
-      for key,cs in self.cuboids[ijk1b_to_idx0_7(ii,ij,ik)].items():
-         if key[1] == s and key[2] == di and key[3] == dj and key[4] == dk and cs.get(abs(i),abs(j),abs(k)): return key[0]
+      si,ii = (0, i) if i >= 0 else (1,-1-i)
+      sj,ij = (0, j) if j >= 0 else (1,-1-j)
+      sk,ik = (0,-k) if k <= 0 else (1, k-1)
+      for key,cs in self.cuboids[ijk1b_to_idx0_7(si,sj,sk)].items():
+         if key[1] == s and key[2] == di and key[3] == dj and key[4] == dk and cs.get(ii,ij,ik): return key[0]
       else: return None
 
-   def optimize(self):
-      if self.level == 0: return
-      with self.quads:
-         if   self.level == 1: cuboids = self.added
-         elif self.level == 2:
-            self.quads.reset()
-            cuboids = self.cuboids
-         else: assert( 0 <= self.level <= 2 )
-         for idx2,cs2 in enumerate(cuboids):
-            si,sj,sk = idx0_7_to_ijk1b(idx2)
-            si = 1-si-si
-            sj = 1-sj-sj
-            sk = 1-sk-sk
+   def compact( self, level ):
+      if   self.opt_level == 0: return
+      elif self.opt_level == 1: cuboids = self.added
+      else                    : cuboids = self.cuboids
+      planes = [1,2,0]
+      lines  = [0,2,1]
+      for cs2 in cuboids:
+         min_s = 1
+         while True:
+            added = []
             for key1,cs1 in cs2.items():
+               if key1[1] < min_s: continue
                c,s,di,dj,dk = key1
+               if level >= 1:
+                  if di <= dj >= dk:
+                     planes[0] = 1
+                     if dk >= di:
+                        planes[1] = 2
+                        planes[2] = 0
+                     else:
+                        planes[1] = 0
+                        planes[2] = 2
+                  elif di <= dk >= dj:
+                     planes[0] = 2
+                     if dj >= di:
+                        planes[1] = 1
+                        planes[2] = 0
+                     else:
+                        planes[1] = 0
+                        planes[2] = 1
+                  else:
+                     planes[0] = 0
+                     if dj >= dk:
+                        planes[1] = 1
+                        planes[2] = 2
+                     else:
+                        planes[1] = 2
+                        planes[2] = 1
+               if level >= 2:
+                  if dj >= di <= dk:
+                     lines[0] = 0
+                     if dk <= dj:
+                        lines[1] = 2
+                        lines[2] = 1
+                     else:
+                        lines[1] = 1
+                        lines[2] = 2
+                  elif di >= dk <= dj:
+                     lines[0] = 2
+                     if di <= dj:
+                        lines[1] = 0
+                        lines[2] = 1
+                     else:
+                        lines[1] = 1
+                        lines[2] = 0
+                  else:
+                     lines[0] = 1
+                     if di <= dk:
+                        lines[1] = 0
+                        lines[2] = 2
+                     else:
+                        lines[1] = 2
+                        lines[2] = 0
                for ijk,cs in cs1.items():
                   for idx,mask in enumerate(cs):
                      if not mask: continue
                      i,j,k = idx0_63_to_ijk2b(idx)
-                     i = ijk[0] + (i<<2)
-                     j = ijk[1] + (j<<2)
-                     k = ijk[2] + (k<<2)
+                     i = ijk[0]+(i<<2)
+                     j = ijk[1]+(j<<2)
+                     k = ijk[2]+(k<<2)
+                     for t in mask_to_2x2x2:
+                        if mask&t[0] == t[0]:
+                           added.append(( (c,s+s,di,dj,dk), (i+t[1])>>1, (j+t[2])>>1, (k+t[3])>>1 ))
+                           mask &= ~t[0]
+                     if not mask:
+                        cs[idx] = mask
+                        continue
+                     if level >= 1:
+                        for p in planes:
+                           if   p == 0:
+                              for t in mask_to_1x2x2:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di,dj+dj,dk+dk), i+t[1], (j+t[2])>>1, (k+t[3])>>1 ))
+                                    mask &= ~t[0]
+                           elif p == 1:
+                              for t in mask_to_2x1x2:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di+di,dj,dk+dk), (i+t[1])>>1, j+t[2], (k+t[3])>>1 ))
+                                    mask &= ~t[0]
+                           else:
+                              for t in mask_to_2x2x1:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di+di,dj+dj,dk), (i+t[1])>>1, (j+t[2])>>1, k+t[3] ))
+                                    mask &= ~t[0]
+                        if not mask:
+                           cs[idx] = mask
+                           continue
+                     if level >= 3:
+                        for p in planes:
+                           if   p == 0:
+                              for t in mask_to_j2_k2:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di,dj+dj,dk), i+t[1], (j+t[2])>>1, k+t[3] ))
+                                    added.append(( (c,s,di,dj,dk+dk), i+t[4], j+t[5], (k+t[6])>>1 ))
+                                    mask &= ~t[0]
+                           elif p == 1:
+                              for t in mask_to_i2_k2:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di+di,dj,dk), (i+t[1])>>1, j+t[2], k+t[3] ))
+                                    added.append(( (c,s,di,dj,dk+dk), i+t[4], j+t[5], (k+t[6])>>1 ))
+                                    mask &= ~t[0]
+                           else:
+                              for t in mask_to_i2_j2:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di+di,dj,dk), (i+t[1])>>1, j+t[2], k+t[3] ))
+                                    added.append(( (c,s,di,dj+dj,dk), i+t[4], (j+t[5])>>1, k+t[6] ))
+                                    mask &= ~t[0]
+                        if not mask:
+                           cs[idx] = mask
+                           continue
+                     if level >= 2:
+                        for l in lines:
+                           if   l == 0:
+                              for t in mask_to_2x1x1:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di+di,dj,dk), (i+t[1])>>1, j+t[2], k+t[3] ))
+                                    mask &= ~t[0]
+                           elif l == 1:
+                              for t in mask_to_1x2x1:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di,dj+dj,dk), i+t[1], (j+t[2])>>1, k+t[3] ))
+                                    mask &= ~t[0]
+                           else:
+                              for t in mask_to_1x1x2:
+                                 if mask&t[0] == t[0]:
+                                    added.append(( (c,s,di,dj,dk+dk), i+t[1], j+t[2], (k+t[3])>>1 ))
+                                    mask &= ~t[0]
+                     cs[idx] = mask
+            if added:
+               min_s = 65536
+               for v in added:
+                  cs2[v[0]].add(v[1],v[2],v[3])
+                  if v[0][1] < min_s: min_s = v[0][1]
+               continue
+            else: break
+         empty = []
+         for key1,cs1 in cs2.items():
+            if cs1.compact(): empty.append(key1)
+         for key1 in empty: del cs2[key1]
+
+   def optimize(self):
+      if self.opt_level == 0: return
+      with self.quads:
+         if   self.opt_level == 1: cuboids = self.added
+         elif self.opt_level == 2:
+            self.quads.reset()
+            cuboids = self.cuboids
+         else: assert( 0 <= self.opt_level <= 2 )
+         cnt = 0
+         for idx2,cs2 in enumerate(cuboids):
+            fi,fj,fk = idx0_7_to_ijk1b(idx2)
+            si =  1-fi-fi
+            sj =  1-fj-fj
+            sk = -1+fk+fk
+            for key1,cs1 in ( cs2.items() if self.opt_level == 1 else sorted( cs2.items(), key=lambda k: k[0][1]*max(k[0][2],k[0][3],k[0][4]), reverse=True ) ):
+               c,s,di,dj,dk = key1
+               ai = si*di
+               aj = sj*dj
+               ak = sk*dk
+               for ijk,cs in cs1.items():
+                  ii = ijk[0]+fi
+                  ij = ijk[1]+fj
+                  ik = ijk[2]+fk
+                  for idx,mask in enumerate(cs):
+                     if not mask: continue
+                     i,j,k = idx0_63_to_ijk2b(idx)
+                     i = ii+(i<<2)
+                     j = ij+(j<<2)
+                     k = ik+(k<<2)
                      m = 1
                      for idx1 in range(64):
                         if mask&m:
                            ijk1 = idx0_63_to_ijk2b(idx1)
-                           self.quads.add( s,si*(i+ijk1[0]),sj*(j+ijk1[1]),sk*(k+ijk1[2]),
+                           self.quads.add( s,ai*(i+ijk1[0]),aj*(j+ijk1[1]),ak*(k+ijk1[2]),
                               ( ( ( 0,  0,  0, di, dj,  0 ), c ),
                                 ( ( 0,  0,-dk,  0, dj,  0 ), c ),
                                 ( ( di, 0,  0, di, dj,-dk ), c ),
                                 ( ( 0,  0,-dk, di,  0,  0 ), c ),
                                 ( ( 0, dj,-dk, di,  0,-dk ), c ),
                                 ( ( 0, dj,  0, di, dj,-dk ), c ) ) )
+                           cnt += 1
                         m += m
-                     if self.level == 1: cs[idx] = 0
+                     if self.opt_level == 1: cs[idx] = 0
+         if self.opt_level == 2: print(cnt)
