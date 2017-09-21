@@ -121,7 +121,7 @@ class Demo(Renderer):
       self.composer.add_shader( composer_vert_glsl, composer_frag_glsl )
       base.set_frame_rate_meter(True)
 
-      self.model = OptimizedVM( 'VoxelModel', GeomVertexFormat.get_v3c4(), 1 )
+      self.model = OptimizedVM( 'VoxelModel', GeomVertexFormat.get_v3c4(), 2 )
       self.model.set_shader_input( Vec3( 1.0,0.0,0.0), 'gnormal', Vec3( 1.0,0.0,0.0) )
       self.model.set_shader_input( Vec3(-1.0,0.0,0.0), 'gnormal', Vec3(-1.0,0.0,0.0) )
       self.model.set_shader_input( Vec3(0.0, 1.0,0.0), 'gnormal', Vec3(0.0, 1.0,0.0) )
@@ -172,30 +172,35 @@ class Demo(Renderer):
       self.model.add(4, -1,0,1, Vec4(1.0,1.0,1.0,1.0))
       self.model.add(1 , 3,3,1, Vec4(1.0,1.0,1.0,1.0))
       self.model.add(1 , 3,4,1, Vec4(1.0,1.0,1.0,1.0))
+      self.model.compact(2)
       self.model.optimize()
 
    def geometry_test2(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if i*i+j*j+k*k <= 144: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.compact(2)
          self.model.optimize()
 
    def geometry_test3(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if i*i+j*j+k*k <= 9: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.compact(2)
          self.model.optimize()
 
    def geometry_test4(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if i*i+j*j+k*k <= 25: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.compact(2)
          self.model.optimize()
 
    def geometry_test5(self):
       with self.model.quads:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             if all( s[0]*s[0]+s[1]*s[1]+s[2]*s[2] <= 36 for s in ( (i,j,k), (i+1,j+1,k-1), (i+1,j,k), (i,j+1,k), (i,j,k-1), (i+1,j+1,k), (i+1,j,k-1), (i,j+1,k-1) ) ): self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.compact(2)
          self.model.optimize()
 
    def geometry_test6(self):
@@ -205,6 +210,7 @@ class Demo(Renderer):
             y = j+0.5
             z = k+0.5
             if x*x+y*y+z*z <= 36: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
+         self.model.compact(3)
          self.model.optimize()
 
    def geometry_test7(self):
@@ -285,14 +291,15 @@ class Demo(Renderer):
             for k,r in enumerate(p):
                for i,c in enumerate(r):
                   if c in cmap: self.model.add(0,i-3,j-5,k-2,cmap[c])
+         self.model.compact(2)
          self.model.optimize()
 
    def geometry_test8(self):
       srgba = [Vec4(1.0,1.0,1.0,1.0)]*256
       rgba_prcd = False
       xyzi_pmtd = False
-      with open( 'teapot.vox', 'rb' ) as f:
-      # with open( 'monu7.vox', 'rb' ) as f:
+      # with open( 'teapot.vox', 'rb' ) as f:
+      with open( 'monu7.vox', 'rb' ) as f:
          if f.read(4) != b'VOX ': raise IOError
          version = int.from_bytes(f.read(4),byteorder='little')
          while f:
@@ -326,6 +333,7 @@ class Demo(Renderer):
                      y = int.from_bytes(f.read(1),byteorder='little')
                      c = int.from_bytes(f.read(1),byteorder='little')
                      self.model.add(0,x-(sx>>1),y-(sy>>1),z-(sz>>1),srgba[c])
+                  self.model.compact(3)
                   self.model.optimize()
                continue
             if chunk_id == b'RGBA' and not rgba_prcd:
