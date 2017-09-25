@@ -175,25 +175,26 @@ class quad:
                      j0 = j2^1
                      k0 = idxs[e0][j0]
                      k2 = idxs[e2][j2]
-                     dk = 1-(j0<<1) # +1 or -1
+                     dk = 1-j0-j0 # +1 or -1
                      k1 = k0+dk
                      if e&3 == 2 and ( k2 == 0 and k1 == lsts[e0] or k2 == lsts[e2] and k1 == 0 ): continue # opposite, corner to corner
                      if self.imap[e0][k0] == self.imap[e2][k2]: # contains corner
                         if k2 == idxs[e2][j0]: continue
                         k2 -= dk
-                     # d  = max( (self.edges[e2][k2]-self.edges[e0][k0]).length_squared(), (self.edges[e2][k2]-self.edges[e0][k0+dk]).length_squared() )
-                     v01  = self.edges[e0][k0+dk]-self.edges[e0][k0]
-                     v02  = self.edges[e2][k2]   -self.edges[e0][k0]
-                     v12  = self.edges[e2][k2]-self.edges[e0][k0+dk]
-                     lenc = max(v02.length_squared(),v12.length_squared())
-                     v01.normalize()
-                     v02.normalize()
-                     v12.normalize()
-                     d102 = abs(v01.dot(v02))
-                     d120 = abs(v02.dot(v12))
-                     d210 = abs(v12.dot(-v01))
-                     # d = min( max(d102,d120)/v02.length(), max(d210,d120)/v12.length() ) 
-                     d = max(d102,d120,d210)*lenc
+                     d  = max( (self.edges[e2][k2]-self.edges[e0][k0]).length_squared(), (self.edges[e2][k2]-self.edges[e0][k1]).length_squared() )
+                     # v01  = self.edges[e0][k1]-self.edges[e0][k0]
+                     # v02  = self.edges[e2][k2]-self.edges[e0][k0]
+                     # v12  = self.edges[e2][k2]-self.edges[e0][k1]
+                     # lenc = max(v02.length_squared(),v12.length_squared())
+                     # v01.normalize()
+                     # v02.normalize()
+                     # v12.normalize()
+                     # d102 = abs(v01.dot(v02))
+                     # d120 = abs(v02.dot(v12))
+                     # d210 = abs(v12.dot(-v01))
+                     # # d = min( max(d102,d120)/v02.length(), max(d210,d120)/v12.length() ) 
+                     # # d = max(d102,d120,d210)
+                     # d = max(d102,d120,d210)*lenc
                      if d < sel[0]: sel = (d,e0,j0,k0,k1,e2,j2,k2,e)
          if len(sel) == 1:
             for e0 in range(4):
