@@ -176,42 +176,32 @@ class Demo(Renderer):
       self.model.optimize()
 
    def geometry_test2(self):
-      with self.model.quads:
+      with self.model.optimized(2,2) as m:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
-            if i*i+j*j+k*k <= 144: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
-         self.model.compact(2)
-         self.model.optimize()
+            if i*i+j*j+k*k <= 144: m.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
 
    def geometry_test3(self):
-      with self.model.quads:
+      with self.model.optimized(2,2) as m:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
-            if i*i+j*j+k*k <= 9: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
-         self.model.compact(2)
-         self.model.optimize()
+            if i*i+j*j+k*k <= 9: m.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
 
    def geometry_test4(self):
-      with self.model.quads:
+      with self.model.optimized(2,2) as m:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
-            if i*i+j*j+k*k <= 25: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
-         self.model.compact(2)
-         self.model.optimize()
+            if i*i+j*j+k*k <= 25: m.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
 
    def geometry_test5(self):
-      with self.model.quads:
+      with self.model.optimized(2,2) as m:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
-            if all( s[0]*s[0]+s[1]*s[1]+s[2]*s[2] <= 36 for s in ( (i,j,k), (i+1,j+1,k-1), (i+1,j,k), (i,j+1,k), (i,j,k-1), (i+1,j+1,k), (i+1,j,k-1), (i,j+1,k-1) ) ): self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
-         self.model.compact(2)
-         self.model.optimize()
+            if all( s[0]*s[0]+s[1]*s[1]+s[2]*s[2] <= 36 for s in ( (i,j,k), (i+1,j+1,k-1), (i+1,j,k), (i,j+1,k), (i,j,k-1), (i+1,j+1,k), (i+1,j,k-1), (i,j+1,k-1) ) ): m.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
 
    def geometry_test6(self):
-      with self.model.quads:
+      with self.model.optimized(2,3) as m:
          for (i,j,k) in ( (i,j,k) for i in range(-8,9) for j in range(-8,9) for k in range(-8,9) ):
             x = i+0.5
             y = j+0.5
             z = k+0.5
-            if x*x+y*y+z*z <= 36: self.model.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
-         self.model.compact(3)
-         self.model.optimize()
+            if x*x+y*y+z*z <= 36: m.add(0,i,j,k,Vec4(1.0,1.0,1.0,1.0))
 
    def geometry_test7(self):
       cmap   = { 'd': Vec4(0.235,0.235,0.141,1.0), 'w': Vec4(1.0,0.992,0.941,1.0), 'g': Vec4(0.447,0.678,0.176,1.0) }
@@ -286,13 +276,11 @@ class Demo(Renderer):
                  '..ww..',
                  '......'))
 
-      with self.model.quads:
+      with self.model.optimized(2,2) as m:
          for j,p in enumerate(reversed(layers)):
             for k,r in enumerate(p):
                for i,c in enumerate(r):
-                  if c in cmap: self.model.add(0,i-3,j-5,k-2,cmap[c])
-         self.model.compact(2)
-         self.model.optimize()
+                  if c in cmap: m.add(0,i-3,j-5,k-2,cmap[c])
 
    def geometry_test8(self):
       srgba = [Vec4(1.0,1.0,1.0,1.0)]*256
@@ -326,15 +314,13 @@ class Demo(Renderer):
                continue
             if chunk_id == b'XYZI' and xyzi_pmtd:
                n = int.from_bytes(f.read(4),byteorder='little')
-               with self.model.quads:
+               with self.model.optimized(2,3) as m:
                   for i in range(n):
                      x = int.from_bytes(f.read(1),byteorder='little')
                      z = int.from_bytes(f.read(1),byteorder='little')
                      y = int.from_bytes(f.read(1),byteorder='little')
                      c = int.from_bytes(f.read(1),byteorder='little')
-                     self.model.add(0,x-(sx>>1),y-(sy>>1),z-(sz>>1),srgba[c])
-                  self.model.compact(3)
-                  self.model.optimize()
+                     m.add(0,x-(sx>>1),y-(sy>>1),z-(sz>>1),srgba[c])
                continue
             if chunk_id == b'RGBA' and not rgba_prcd:
                for i in range(1,257):
