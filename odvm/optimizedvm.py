@@ -1,5 +1,5 @@
-from odvm.voxelmodel import VoxelModel
-from odvm.cuboids import cuboids_level, ijk1b_to_idx0_7, idx0_7_to_ijk1b, idx0_63_to_ijk2b, mask_to_2x2x2, mask_to_1x2x2, mask_to_2x1x2, mask_to_2x2x1, mask_to_2x1x1, mask_to_1x2x1, mask_to_1x1x2, mask_to_i2_j2, mask_to_i2_k2, mask_to_j2_k2
+from .voxelmodel import VoxelModel
+from .cuboids import cuboids_level, ijk1b_to_idx0_7, idx0_7_to_ijk1b, idx0_63_to_ijk2b, mask_to_2x2x2, mask_to_1x2x2, mask_to_2x1x2, mask_to_2x2x1, mask_to_2x1x1, mask_to_1x2x1, mask_to_1x1x2, mask_to_i2_j2, mask_to_i2_k2, mask_to_j2_k2
 from collections import defaultdict
 
 

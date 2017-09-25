@@ -1,5 +1,5 @@
-from odvm.groupby import GroupByNormal
-from odvm.quads import quads
+from .groupby import GroupByNormal
+from .quads import quads
 
 
 class VoxelModel(GroupByNormal):

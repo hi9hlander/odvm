@@ -1,7 +1,7 @@
 from panda3d.core import Vec3
-from odvm.edges import edge, edges
-from odvm.grid import square, grid, same_corners
-from odvm.groupby import GroupByNormal
+from .edges import edge, edges
+from .grid import square, grid, same_corners
+from .groupby import GroupByNormal
 
 
 def slice_by_sqr(v0,v1,v2,v3,i1,i2):
