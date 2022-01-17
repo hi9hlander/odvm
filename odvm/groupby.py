@@ -75,15 +75,15 @@ class GeomPlanes(Geom):
       if self.unused_v:
          idx = self.unused_v.pop()
          self.vertex.set_row(idx)
-         self.vertex.set_data3f(v)
+         self.vertex.set_data3f(*v)
          self.colour.set_row(idx)
-         self.colour.set_data4f(c)
+         self.colour.set_data4f(*c)
       else:
          idx = self.vertices.get_num_rows()
          self.vertex.set_row(idx)
-         self.vertex.add_data3f(v)
+         self.vertex.add_data3f(*v)
          self.colour.set_row(idx)
-         self.colour.add_data4f(c)
+         self.colour.add_data4f(*c)
       self.used_v.append(idx)
       return idx
 
